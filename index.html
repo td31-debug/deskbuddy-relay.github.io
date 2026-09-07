@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Connecting to DeskBuddy...</title>
+</head>
+<body style="font-family:sans-serif; text-align:center; padding-top:60px;">
+  <p id="msg">Connecting to your device...</p>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const error = params.get('error');
+
+    if (code) {
+      // Real page navigation to your device on the local network — NOT a
+      // background fetch, since browsers block that (mixed content).
+      // This is a normal redirect, so it works everywhere.
+      window.location.href = "http://deskbuddy.local/spotify-callback?code=" + encodeURIComponent(code);
+    } else if (error) {
+      document.getElementById('msg').innerText = "Spotify login was cancelled or failed: " + error;
+    } else {
+      document.getElementById('msg').innerText = "No authorization code received.";
+    }
+  </script>
+</body>
+</html>
