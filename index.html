@@ -2,25 +2,120 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Connecting to DeskBuddy...</title>
-</head>
-<body style="font-family:sans-serif; text-align:center; padding-top:60px;">
-  <p id="msg">Connecting to your device...</p>
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const error = params.get('error');
-
-    if (code) {
-      // Real page navigation to your device on the local network — NOT a
-      // background fetch, since browsers block that (mixed content).
-      // This is a normal redirect, so it works everywhere.
-      window.location.href = "http://deskbuddy.local/spotify-callback?code=" + encodeURIComponent(code);
-    } else if (error) {
-      document.getElementById('msg').innerText = "Spotify login was cancelled or failed: " + error;
-    } else {
-      document.getElementById('msg').innerText = "No authorization code received.";
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeskBuddy</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111; color: #eee;
+      text-align: center; padding: 60px 20px;
     }
-  </script>
+    h2 { font-weight: 600; margin-bottom: 6px; }
+    p  { color: #aaa; line-height: 1.5; }
+    input {
+      padding: 12px; font-size: 16px; width: 260px; max-width: 80vw;
+      border-radius: 8px; border: 1px solid #444;
+      background: #1c1c1c; color: #eee; text-align: center;
+    }
+    button {
+      padding: 12px 22px; font-size: 16px; margin: 10px 6px;
+      border-radius: 8px; border: none; cursor: pointer;
+      background: #1DB954; color: #fff;
+    }
+    button.secondary { background: #333; color: #ccc; }
+    .err { color: #ff7070; }
+    .hint { font-size: 13px; color: #777; margin-top: 24px; }
+    code { color: #1DB954; }
+  </style>
+</head>
+<body>
+
+  <h2 id="title">DeskBuddy</h2>
+  <p id="msg">Working...</p>
+  <div id="form" style="display:none">
+    <input id="host" placeholder="192.168.1.42 or deskbuddy.local">
+    <br>
+    <button onclick="go()">Continue</button>
+    <button class="secondary" onclick="forget()">Forget saved address</button>
+    <p class="hint">
+      Find this on the device's Serial output at boot, or in your router's
+      DHCP client list. Saved in this browser only.
+    </p>
+  </div>
+
+<script>
+const KEY    = 'deskbuddy_host';
+const params = new URLSearchParams(location.search);
+const code   = params.get('code');
+const error  = params.get('error');
+
+const msgEl   = document.getElementById('msg');
+const formEl  = document.getElementById('form');
+const hostEl  = document.getElementById('host');
+
+// An explicit ?host= in the URL always wins and gets remembered, so you can
+// bookmark a working link once and never see the prompt again.
+const urlHost = params.get('host');
+if (urlHost) localStorage.setItem(KEY, urlHost.trim());
+
+function savedHost() {
+  return (localStorage.getItem(KEY) || '').trim();
+}
+
+// Accepts "192.168.1.42", "deskbuddy.local", or a full http:// URL.
+function normalise(h) {
+  h = h.trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(h)) h = 'http://' + h;
+  return h;
+}
+
+function redirect(host) {
+  const url = normalise(host) + '/spotify-callback?code=' + encodeURIComponent(code);
+  msgEl.textContent = 'Handing the code to your device...';
+  formEl.style.display = 'none';
+  // replace() rather than href: keeps the single-use authorization code out
+  // of browser history and out of the referrer chain.
+  location.replace(url);
+}
+
+function go() {
+  const h = hostEl.value.trim();
+  if (!h) { hostEl.focus(); return; }
+  localStorage.setItem(KEY, h);
+  redirect(h);
+}
+
+function forget() {
+  localStorage.removeItem(KEY);
+  hostEl.value = '';
+  hostEl.focus();
+}
+
+function askForHost(reason) {
+  msgEl.innerHTML = reason;
+  hostEl.value = savedHost();
+  formEl.style.display = 'block';
+  hostEl.focus();
+}
+
+// ---- main ----
+if (error) {
+  document.getElementById('title').textContent = 'Login failed';
+  msgEl.innerHTML = '<span class="err">Spotify returned: ' + error + '</span>' +
+                    '<br><br>Close this page and try again from the device.';
+} else if (!code) {
+  document.getElementById('title').textContent = 'Nothing to do';
+  msgEl.textContent = 'No authorization code in this URL. ' +
+                      'Start the login from your DeskBuddy page.';
+} else if (savedHost()) {
+  redirect(savedHost());
+} else {
+  askForHost('Almost there. What address does your DeskBuddy answer on?');
+}
+
+// If the redirect fails (device unreachable, wrong address) the browser shows
+// its own error page, so this can't detect it. Coming back here re-prompts.
+</script>
+
 </body>
 </html>
