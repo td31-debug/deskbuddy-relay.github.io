@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeskBuddy</title>
+<style>
+  :root { --accent:#1DB954; --bg:#0d0d0f; --card:#17171b; --line:#26262c; --dim:#8a8a94; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:24px 16px 48px;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--bg); color:#ececf0; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:460px; margin:0 auto; }
+  h1 { font-size:22px; font-weight:650; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--dim); font-size:13px; margin:0 0 24px; }
+
+  .card {
+    background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:18px; margin-bottom:14px;
+  }
+  label { display:block; font-size:12px; color:var(--dim); margin:14px 0 6px; }
+  input {
+    width:100%; padding:12px 14px; font-size:16px;
+    background:#101014; color:#ececf0;
+    border:1px solid var(--line); border-radius:9px;
+  }
+  input:focus { outline:none; border-color:var(--accent); }
+  button {
+    width:100%; padding:13px; font-size:15px; font-weight:600;
+    margin-top:18px; border:none; border-radius:9px; cursor:pointer;
+    background:var(--accent); color:#07110b;
+  }
+  button.ghost { background:transparent; color:var(--dim); border:1px solid var(--line); }
+
+  .statusline { display:flex; align-items:center; gap:9px; margin-bottom:16px; font-size:13px; }
+  .dot { width:9px; height:9px; border-radius:50%; background:#4a4a52; flex:none; }
+  .dot.on  { background:#2ecc71; box-shadow:0 0 9px #2ecc7166; }
+  .dot.off { background:#e05252; }
+  .dot.wait{ background:#e0a852; }
+
+  .devhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .devid { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--dim); }
+  .badge {
+    font-size:11px; padding:3px 9px; border-radius:99px;
+    background:#1f2a22; color:#2ecc71; font-weight:600;
+  }
+  .badge.off { background:#2a1f1f; color:#e05252; }
+
+  .track { font-size:19px; font-weight:600; margin:0 0 3px; line-height:1.3; }
+  .artist { font-size:14px; margin:0 0 18px; }
+  .idle { color:var(--dim); font-style:italic; }
+
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:11px 16px; }
+  .k { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; }
+  .v { font-size:14px; margin-top:2px; font-family:ui-monospace,Menlo,monospace; }
+  .sw { display:inline-block; width:12px; height:12px; border-radius:3px;
+        vertical-align:-1px; margin-right:6px; border:1px solid #ffffff22; }
+
+  .err { color:#ff8a8a; font-size:13px; margin-top:14px; line-height:1.5; }
+  .hint { color:var(--dim); font-size:12px; margin-top:20px; line-height:1.6; }
+  .hide { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>DeskBuddy</h1>
+  <p class="sub" id="sub">Sign in to your broker</p>
+
+  <!-- ---------- login ---------- -->
+  <div class="card" id="login">
+    <label for="host">Cluster URL</label>
+    <input id="host" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+    <label for="user">Username</label>
+    <input id="user" autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="db-admin">
+
+    <label for="pass">Password</label>
+    <input id="pass" type="password">
+
+    <button id="go">Connect</button>
+    <div class="err hide" id="err"></div>
+    <p class="hint">
+      Use the <b>db-admin</b> account, not db-device. Credentials are stored in
+      this browser only — they are never part of the page itself, so anyone
+      opening this URL without them sees nothing.
+    </p>
+  </div>
+
+  <!-- ---------- dashboard ---------- -->
+  <div id="dash" class="hide">
+    <div class="statusline">
+      <span class="dot wait" id="brokerDot"></span>
+      <span id="brokerTxt">Connecting…</span>
+    </div>
+    <div id="devices"></div>
+    <button class="ghost" id="out">Sign out</button>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
+<script>
+const KEY = 'deskbuddy_mqtt';
+const $   = id => document.getElementById(id);
+
+// Default to the known cluster; editable in case it ever changes.
+const DEFAULT_HOST = 'e989b112ef694079bdfc487180748040.s1.eu.hivemq.cloud';
+
+const devices = {};      // id -> { state, status, seen }
+let client = null;
+
+// ---------------------------------------------------------------- helpers
+function fmtUptime(s) {
+  if (s == null) return '—';
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600);
+  const m = Math.floor(s % 3600 / 60);
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${m}m`;
+  return `${m}m ${s % 60}s`;
+}
+const esc = t => String(t ?? '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+function rssiLabel(r) {
+  if (r == null) return '—';
+  const q = r >= -55 ? 'excellent' : r >= -67 ? 'good' : r >= -75 ? 'fair' : 'weak';
+  return `${r} dBm · ${q}`;
+}
+
+// ---------------------------------------------------------------- render
+function render() {
+  const ids = Object.keys(devices).sort();
+  if (!ids.length) {
+    $('devices').innerHTML =
+      '<div class="card"><p class="idle" style="margin:0">' +
+      'Connected to the broker, but no device has reported yet. ' +
+      'If DeskBuddy is powered on it should appear within a minute.</p></div>';
+    return;
+  }
+
+  $('devices').innerHTML = ids.map(id => {
+    const d  = devices[id];
+    const s  = d.state || {};
+    const on = d.status === 'online';
+    const theme = s.theme && /^#[0-9a-f]{6}$/i.test(s.theme) ? s.theme : '#1DB954';
+    const playing = s.playing && s.track;
+
+    return `
+      <div class="card">
+        <div class="devhead">
+          <span class="devid">${esc(id)}</span>
+          <span class="badge ${on ? '' : 'off'}">${on ? 'online' : 'offline'}</span>
+        </div>
+
+        ${playing
+          ? `<p class="track">${esc(s.track)}</p>
+             <p class="artist" style="color:${theme}">${esc(s.artist)}</p>`
+          : `<p class="track idle">${s.spotify === false
+                ? 'Spotify not linked'
+                : 'Nothing playing'}</p>
+             <p class="artist idle">Showing the clock</p>`}
+
+        <div class="grid">
+          <div><div class="k">Mode</div><div class="v">${esc(s.mode || '—')}</div></div>
+          <div><div class="k">Theme</div>
+               <div class="v"><span class="sw" style="background:${theme}"></span>${esc(s.theme || '—')}</div></div>
+          <div><div class="k">Local IP</div><div class="v">${esc(s.ip || '—')}</div></div>
+          <div><div class="k">Signal</div><div class="v">${rssiLabel(s.rssi)}</div></div>
+          <div><div class="k">Uptime</div><div class="v">${fmtUptime(s.uptimeS)}</div></div>
+          <div><div class="k">Free heap</div>
+               <div class="v">${s.heap ? Math.round(s.heap / 1024) + ' KB' : '—'}</div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function setBroker(cls, txt) {
+  $('brokerDot').className = 'dot ' + cls;
+  $('brokerTxt').textContent = txt;
+}
+
+// ---------------------------------------------------------------- connect
+function connect(host, user, pass, remember) {
+  const url = `wss://${host}:8884/mqtt`;   // 8884 = MQTT over WebSocket + TLS
+
+  client = mqtt.connect(url, {
+    username: user,
+    password: pass,
+    clientId: 'dbweb-' + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    reconnectPeriod: 4000,
+    connectTimeout: 10000
+  });
+
+  client.on('connect', () => {
+    if (remember) localStorage.setItem(KEY, JSON.stringify({ host, user, pass }));
+    $('login').classList.add('hide');
+    $('dash').classList.remove('hide');
+    $('sub').textContent = host;
+    setBroker('on', 'Broker connected');
+    // Retained messages arrive immediately on subscribe, so state shows up
+    // without waiting for the device to publish anything new.
+    client.subscribe('deskbuddy/+/state',  { qos: 1 });
+    client.subscribe('deskbuddy/+/status', { qos: 1 });
+    render();
+  });
+
+  client.on('message', (topic, payload) => {
+    const parts = topic.split('/');       // deskbuddy / <id> / <leaf>
+    if (parts.length !== 3) return;
+    const id = parts[1];
+    devices[id] = devices[id] || {};
+
+    if (parts[2] === 'status') {
+      devices[id].status = payload.toString();
+    } else if (parts[2] === 'state') {
+      try { devices[id].state = JSON.parse(payload.toString()); } catch (e) { return; }
+    }
+    render();
+  });
+
+  client.on('error', e => {
+    const msg = (e && e.message) || 'Connection failed';
+    // Bad credentials surface here rather than as a close event.
+    if (/not authorized|bad user|refused/i.test(msg)) {
+      signOut('Broker rejected those credentials. Check the username and ' +
+              'password, and make sure you are using db-admin.');
+    } else {
+      setBroker('off', msg);
+    }
+  });
+
+  client.on('reconnect', () => setBroker('wait', 'Reconnecting…'));
+  client.on('close',     () => setBroker('off', 'Disconnected'));
+}
+
+function signOut(message) {
+  if (client) { try { client.end(true); } catch (e) {} client = null; }
+  localStorage.removeItem(KEY);
+  for (const k in devices) delete devices[k];
+  $('dash').classList.add('hide');
+  $('login').classList.remove('hide');
+  $('sub').textContent = 'Sign in to your broker';
+  if (message) { $('err').textContent = message; $('err').classList.remove('hide'); }
+}
+
+// ---------------------------------------------------------------- boot
+$('go').onclick = () => {
+  const host = $('host').value.trim().replace(/^wss?:\/\//, '').replace(/[:/].*$/, '');
+  const user = $('user').value.trim();
+  const pass = $('pass').value;
+  if (!host || !user || !pass) return;
+  $('err').classList.add('hide');
+  connect(host, user, pass, true);
+};
+$('pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+$('out').onclick = () => signOut();
+
+const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } })();
+$('host').value = (saved && saved.host) || DEFAULT_HOST;
+$('user').value = (saved && saved.user) || 'db-admin';
+if (saved && saved.pass) connect(saved.host, saved.user, saved.pass, true);
+</script>
+</body>
+</html>
