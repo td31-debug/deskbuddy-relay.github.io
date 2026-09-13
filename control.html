@@ -2,64 +2,90 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0f">
 <title>DeskBuddy</title>
 <style>
   :root { --accent:#1DB954; --bg:#0d0d0f; --card:#17171b; --line:#26262c; --dim:#8a8a94; }
-  * { box-sizing:border-box; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body {
-    margin:0; padding:24px 16px 48px;
+    margin:0; padding:22px 16px 44px;
     font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
     background:var(--bg); color:#ececf0; -webkit-font-smoothing:antialiased;
   }
   .wrap { max-width:460px; margin:0 auto; }
-  h1 { font-size:22px; font-weight:650; margin:0 0 4px; letter-spacing:-.01em; }
-  .sub { color:var(--dim); font-size:13px; margin:0 0 24px; }
+  h1 { font-size:22px; font-weight:650; margin:0 0 3px; letter-spacing:-.01em; }
+  .sub { color:var(--dim); font-size:12px; margin:0 0 22px;
+         font-family:ui-monospace,Menlo,monospace; }
 
-  .card {
-    background:var(--card); border:1px solid var(--line);
-    border-radius:14px; padding:18px; margin-bottom:14px;
-  }
+  .card { background:var(--card); border:1px solid var(--line);
+          border-radius:14px; padding:18px; margin-bottom:13px; }
   label { display:block; font-size:12px; color:var(--dim); margin:14px 0 6px; }
-  input {
+  input[type=text], input[type=password] {
     width:100%; padding:12px 14px; font-size:16px;
-    background:#101014; color:#ececf0;
-    border:1px solid var(--line); border-radius:9px;
+    background:#101014; color:#ececf0; border:1px solid var(--line); border-radius:9px;
   }
   input:focus { outline:none; border-color:var(--accent); }
-  button {
-    width:100%; padding:13px; font-size:15px; font-weight:600;
-    margin-top:18px; border:none; border-radius:9px; cursor:pointer;
-    background:var(--accent); color:#07110b;
-  }
-  button.ghost { background:transparent; color:var(--dim); border:1px solid var(--line); }
+  button { font-family:inherit; cursor:pointer; border:none; }
+  .primary { width:100%; padding:13px; font-size:15px; font-weight:600;
+             margin-top:18px; border-radius:9px; background:var(--accent); color:#07110b; }
+  .ghost { width:100%; padding:12px; font-size:14px; border-radius:9px;
+           background:transparent; color:var(--dim); border:1px solid var(--line); }
 
-  .statusline { display:flex; align-items:center; gap:9px; margin-bottom:16px; font-size:13px; }
+  .statusline { display:flex; align-items:center; gap:9px; margin-bottom:14px; font-size:13px; }
   .dot { width:9px; height:9px; border-radius:50%; background:#4a4a52; flex:none; }
   .dot.on  { background:#2ecc71; box-shadow:0 0 9px #2ecc7166; }
   .dot.off { background:#e05252; }
   .dot.wait{ background:#e0a852; }
 
-  .devhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .devhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; }
   .devid { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--dim); }
-  .badge {
-    font-size:11px; padding:3px 9px; border-radius:99px;
-    background:#1f2a22; color:#2ecc71; font-weight:600;
-  }
+  .badge { font-size:11px; padding:3px 9px; border-radius:99px;
+           background:#1f2a22; color:#2ecc71; font-weight:600; }
   .badge.off { background:#2a1f1f; color:#e05252; }
 
-  .track { font-size:19px; font-weight:600; margin:0 0 3px; line-height:1.3; }
-  .artist { font-size:14px; margin:0 0 18px; }
+  .now { display:flex; gap:14px; align-items:flex-start; }
+  .cover { width:78px; height:78px; border-radius:9px; flex:none;
+           background:#0b0b0e; object-fit:cover; border:1px solid var(--line); }
+  .meta { min-width:0; flex:1; }
+  .track { font-size:17px; font-weight:600; margin:0 0 3px; line-height:1.25;
+           overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .artist { font-size:13px; margin:0; overflow:hidden;
+            text-overflow:ellipsis; white-space:nowrap; }
   .idle { color:var(--dim); font-style:italic; }
+
+  .bar { height:5px; border-radius:99px; background:#26262c; margin:16px 0 7px; overflow:hidden; }
+  .fill { height:100%; width:0; border-radius:99px; background:var(--accent);
+          transition:width .25s linear; }
+  .times { display:flex; justify-content:space-between;
+           font-size:11px; color:var(--dim); font-family:ui-monospace,Menlo,monospace; }
+
+  .sect { font-size:11px; color:var(--dim); text-transform:uppercase;
+          letter-spacing:.06em; margin:0 0 10px; }
+  .row { display:flex; gap:7px; }
+  .seg { flex:1; padding:10px 4px; font-size:13px; border-radius:8px;
+         background:#101014; color:var(--dim); border:1px solid var(--line); }
+  .seg.sel { background:var(--accent); color:#07110b; border-color:transparent; font-weight:600; }
+
+  .swatches { display:flex; gap:8px; flex-wrap:wrap; }
+  .sw { width:34px; height:34px; border-radius:9px; border:2px solid transparent; position:relative; }
+  .sw.sel { border-color:#fff; }
+  .sw span { position:absolute; bottom:-15px; left:50%; transform:translateX(-50%);
+             font-size:9px; color:var(--dim); }
+  .swrap { padding-bottom:16px; }
+
+  input[type=range] { width:100%; accent-color:var(--accent); margin:4px 0 0; }
+  .bval { float:right; font-size:12px; color:var(--dim);
+          font-family:ui-monospace,Menlo,monospace; }
 
   .grid { display:grid; grid-template-columns:1fr 1fr; gap:11px 16px; }
   .k { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; }
-  .v { font-size:14px; margin-top:2px; font-family:ui-monospace,Menlo,monospace; }
-  .sw { display:inline-block; width:12px; height:12px; border-radius:3px;
-        vertical-align:-1px; margin-right:6px; border:1px solid #ffffff22; }
+  .v { font-size:13px; margin-top:2px; font-family:ui-monospace,Menlo,monospace; }
 
+  .danger { padding:11px; font-size:13px; border-radius:8px; background:#1c1416;
+            color:#e08585; border:1px solid #3a2226; width:100%; margin-top:8px; }
   .err { color:#ff8a8a; font-size:13px; margin-top:14px; line-height:1.5; }
-  .hint { color:var(--dim); font-size:12px; margin-top:20px; line-height:1.6; }
+  .hint { color:var(--dim); font-size:12px; margin-top:18px; line-height:1.6; }
   .hide { display:none; }
 </style>
 </head>
@@ -69,32 +95,27 @@
   <h1>DeskBuddy</h1>
   <p class="sub" id="sub">Sign in to your broker</p>
 
-  <!-- ---------- login ---------- -->
+  <!-- ---------------- login ---------------- -->
   <div class="card" id="login">
     <label for="host">Cluster URL</label>
-    <input id="host" autocapitalize="off" autocorrect="off" spellcheck="false">
-
+    <input type="text" id="host" autocapitalize="off" autocorrect="off" spellcheck="false">
     <label for="user">Username</label>
-    <input id="user" autocapitalize="off" autocorrect="off" spellcheck="false"
-           placeholder="db-admin">
-
+    <input type="text" id="user" autocapitalize="off" autocorrect="off" spellcheck="false">
     <label for="pass">Password</label>
-    <input id="pass" type="password">
-
-    <button id="go">Connect</button>
+    <input type="password" id="pass">
+    <button class="primary" id="go">Connect</button>
     <div class="err hide" id="err"></div>
     <p class="hint">
-      Use the <b>db-admin</b> account, not db-device. Credentials are stored in
-      this browser only — they are never part of the page itself, so anyone
-      opening this URL without them sees nothing.
+      Use <b>db-admin</b>, not db-device. Credentials live in this browser only —
+      they are never part of the page, so anyone opening this URL without them
+      sees only this form.
     </p>
   </div>
 
-  <!-- ---------- dashboard ---------- -->
+  <!-- ---------------- dashboard ---------------- -->
   <div id="dash" class="hide">
     <div class="statusline">
-      <span class="dot wait" id="brokerDot"></span>
-      <span id="brokerTxt">Connecting…</span>
+      <span class="dot wait" id="bdot"></span><span id="btxt">Connecting…</span>
     </div>
     <div id="devices"></div>
     <button class="ghost" id="out">Sign out</button>
@@ -105,134 +126,241 @@
 <script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
 <script>
 const KEY = 'deskbuddy_mqtt';
-const $   = id => document.getElementById(id);
-
-// Default to the known cluster; editable in case it ever changes.
+const $ = id => document.getElementById(id);
 const DEFAULT_HOST = 'e989b112ef694079bdfc487180748040.s1.eu.hivemq.cloud';
 
-const devices = {};      // id -> { state, status, seen }
-let client = null;
+const THEMES = [
+  ['auto',   'linear-gradient(135deg,#ffb040,#40c8ff,#ff7078,#968cff)'],
+  ['red',    '#ff5a5a'], ['green', '#46e682'], ['blue',   '#5a96ff'],
+  ['amber',  '#ffb040'], ['violet','#be82ff'], ['mono',   '#e1e1eb']
+];
 
-// ---------------------------------------------------------------- helpers
+let client = null;
+const devices = {};     // id -> { state, status, rxAt }
+
+// ------------------------------------------------------------ utilities
+const esc = t => String(t ?? '').replace(/[<>&"]/g,
+  c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+function mmss(ms) {
+  if (!ms || ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 function fmtUptime(s) {
   if (s == null) return '—';
-  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600);
-  const m = Math.floor(s % 3600 / 60);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
   if (d) return `${d}d ${h}h`;
   if (h) return `${h}h ${m}m`;
   return `${m}m ${s % 60}s`;
 }
-const esc = t => String(t ?? '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-
 function rssiLabel(r) {
   if (r == null) return '—';
   const q = r >= -55 ? 'excellent' : r >= -67 ? 'good' : r >= -75 ? 'fair' : 'weak';
   return `${r} dBm · ${q}`;
 }
 
-// ---------------------------------------------------------------- render
-function render() {
+// The device publishes progress only when something changes. Between those
+// messages the browser advances the bar itself from the local clock — the same
+// trick the firmware uses on the panel, so both stay in step without traffic.
+function liveProgress(d) {
+  const s = d.state || {};
+  if (!s.playing) return s.progressMs || 0;
+  const elapsed = Date.now() - (d.rxAt || Date.now());
+  return Math.min((s.progressMs || 0) + elapsed, s.durationMs || 0);
+}
+
+function send(id, obj) {
+  if (!client || !client.connected) return;
+  client.publish(`deskbuddy/${id}/cmd`, JSON.stringify(obj), { qos: 1 });
+}
+
+// ------------------------------------------------------------ rendering
+// Full rebuild only when the payload changes; the ticking parts are patched
+// in place every 250 ms so the controls never lose focus mid-drag.
+function renderAll() {
   const ids = Object.keys(devices).sort();
   if (!ids.length) {
-    $('devices').innerHTML =
-      '<div class="card"><p class="idle" style="margin:0">' +
-      'Connected to the broker, but no device has reported yet. ' +
-      'If DeskBuddy is powered on it should appear within a minute.</p></div>';
+    $('devices').innerHTML = '<div class="card"><p class="idle" style="margin:0">' +
+      'Connected to the broker, but no device has reported yet. If DeskBuddy is ' +
+      'powered on it should appear within half a minute.</p></div>';
     return;
   }
+  $('devices').innerHTML = ids.map(cardHtml).join('');
+  ids.forEach(bind);
+  tick();
+}
 
-  $('devices').innerHTML = ids.map(id => {
-    const d  = devices[id];
-    const s  = d.state || {};
-    const on = d.status === 'online';
-    const theme = s.theme && /^#[0-9a-f]{6}$/i.test(s.theme) ? s.theme : '#1DB954';
-    const playing = s.playing && s.track;
+function cardHtml(id) {
+  const d = devices[id], s = d.state || {};
+  const on = d.status === 'online';
+  const theme = /^#[0-9a-f]{6}$/i.test(s.theme || '') ? s.theme : '#1DB954';
+  const playing = s.playing && s.track;
 
-    return `
-      <div class="card">
-        <div class="devhead">
-          <span class="devid">${esc(id)}</span>
-          <span class="badge ${on ? '' : 'off'}">${on ? 'online' : 'offline'}</span>
-        </div>
+  const modeBtns = ['auto', 'clock', 'spotify'].map(m =>
+    `<button class="seg ${s.setMode === m ? 'sel' : ''}" data-cmd="mode" data-val="${m}"
+      >${m}</button>`).join('');
 
+  const swatches = THEMES.map(([name, css]) =>
+    `<div style="text-align:center">
+       <button class="sw ${s.setTheme === name ? 'sel' : ''}" data-cmd="clockTheme"
+               data-val="${name}" style="background:${css}" title="${name}"></button>
+       <span>${name}</span>
+     </div>`).join('');
+
+  return `
+  <div class="card" data-id="${esc(id)}">
+    <div class="devhead">
+      <span class="devid">${esc(id)}</span>
+      <span class="badge ${on ? '' : 'off'}">${on ? 'online' : 'offline'}</span>
+    </div>
+
+    <div class="now">
+      ${playing && s.art
+        ? `<img class="cover" src="${esc(s.art)}" alt="">`
+        : `<div class="cover"></div>`}
+      <div class="meta">
         ${playing
           ? `<p class="track">${esc(s.track)}</p>
              <p class="artist" style="color:${theme}">${esc(s.artist)}</p>`
-          : `<p class="track idle">${s.spotify === false
-                ? 'Spotify not linked'
-                : 'Nothing playing'}</p>
+          : `<p class="track idle">${s.spotify === false ? 'Spotify not linked' : 'Nothing playing'}</p>
              <p class="artist idle">Showing the clock</p>`}
+      </div>
+    </div>
 
-        <div class="grid">
-          <div><div class="k">Mode</div><div class="v">${esc(s.mode || '—')}</div></div>
-          <div><div class="k">Theme</div>
-               <div class="v"><span class="sw" style="background:${theme}"></span>${esc(s.theme || '—')}</div></div>
-          <div><div class="k">Local IP</div><div class="v">${esc(s.ip || '—')}</div></div>
-          <div><div class="k">Signal</div><div class="v">${rssiLabel(s.rssi)}</div></div>
-          <div><div class="k">Uptime</div><div class="v">${fmtUptime(s.uptimeS)}</div></div>
-          <div><div class="k">Free heap</div>
-               <div class="v">${s.heap ? Math.round(s.heap / 1024) + ' KB' : '—'}</div></div>
-        </div>
-      </div>`;
-  }).join('');
+    <div class="bar"><div class="fill" data-fill style="background:${theme}"></div></div>
+    <div class="times"><span data-elapsed>0:00</span><span data-total>0:00</span></div>
+  </div>
+
+  <div class="card" data-id="${esc(id)}">
+    <p class="sect">Display mode</p>
+    <div class="row">${modeBtns}</div>
+
+    <p class="sect" style="margin-top:22px">Clock theme</p>
+    <div class="swatches swrap">${swatches}</div>
+
+    <p class="sect" style="margin-top:6px">Brightness
+      <span class="bval" data-bval>${s.brightness ?? 100}%</span></p>
+    <input type="range" min="5" max="100" step="5"
+           value="${s.brightness ?? 100}" data-cmd="brightness">
+  </div>
+
+  <div class="card" data-id="${esc(id)}">
+    <div class="grid">
+      <div><div class="k">Local IP</div><div class="v">${esc(s.ip || '—')}</div></div>
+      <div><div class="k">Signal</div><div class="v">${rssiLabel(s.rssi)}</div></div>
+      <div><div class="k">Uptime</div><div class="v" data-uptime>${fmtUptime(s.uptimeS)}</div></div>
+      <div><div class="k">Free heap</div>
+           <div class="v">${s.heap ? Math.round(s.heap / 1024) + ' KB' : '—'}</div></div>
+    </div>
+    <button class="danger" data-act="spotifyLogout">Disconnect Spotify</button>
+    <button class="danger" data-act="reboot">Reboot device</button>
+    <button class="danger" data-act="wifiReset">Forget WiFi &amp; restart</button>
+  </div>`;
 }
 
-function setBroker(cls, txt) {
-  $('brokerDot').className = 'dot ' + cls;
-  $('brokerTxt').textContent = txt;
+function bind(id) {
+  document.querySelectorAll(`[data-id="${CSS.escape(id)}"]`).forEach(card => {
+
+    card.querySelectorAll('button[data-cmd]').forEach(b => {
+      b.onclick = () => {
+        send(id, { [b.dataset.cmd]: b.dataset.val });
+        // Optimistic highlight so the UI feels instant; the device's next
+        // state message confirms it a moment later.
+        const group = b.dataset.cmd === 'mode' ? '.seg' : '.sw';
+        card.querySelectorAll(`${group}[data-cmd="${b.dataset.cmd}"]`)
+            .forEach(x => x.classList.remove('sel'));
+        b.classList.add('sel');
+      };
+    });
+
+    const slider = card.querySelector('input[data-cmd="brightness"]');
+    if (slider) {
+      const out = card.querySelector('[data-bval]');
+      slider.oninput  = () => { if (out) out.textContent = slider.value + '%'; };
+      // Only publish when the drag ends, so one adjustment is one message.
+      slider.onchange = () => send(id, { brightness: Number(slider.value) });
+    }
+
+    card.querySelectorAll('button[data-act]').forEach(b => {
+      b.onclick = () => {
+        const a = b.dataset.act;
+        const warn = a === 'wifiReset'
+          ? 'Clear saved WiFi? The device restarts into its setup portal and you will need to reconnect it by hand.'
+          : a === 'spotifyLogout'
+          ? 'Disconnect Spotify? You will need to link the account again from the device page.'
+          : 'Reboot the device now?';
+        if (confirm(warn)) send(id, { action: a });
+      };
+    });
+  });
 }
 
-// ---------------------------------------------------------------- connect
-function connect(host, user, pass, remember) {
-  const url = `wss://${host}:8884/mqtt`;   // 8884 = MQTT over WebSocket + TLS
+// Patches only the ticking values — never rebuilds the DOM, so a slider being
+// dragged or a button being tapped is never yanked out from under you.
+function tick() {
+  for (const id of Object.keys(devices)) {
+    const d = devices[id], s = d.state || {};
+    const p = liveProgress(d), dur = s.durationMs || 0;
+    document.querySelectorAll(`[data-id="${CSS.escape(id)}"]`).forEach(card => {
+      const fill = card.querySelector('[data-fill]');
+      if (fill) fill.style.width = (dur ? Math.min(100, p / dur * 100) : 0) + '%';
+      const el = card.querySelector('[data-elapsed]');
+      if (el) el.textContent = mmss(p);
+      const to = card.querySelector('[data-total]');
+      if (to) to.textContent = mmss(dur);
+      const up = card.querySelector('[data-uptime]');
+      if (up && s.uptimeS != null && d.status === 'online') {
+        up.textContent = fmtUptime(s.uptimeS + Math.floor((Date.now() - d.rxAt) / 1000));
+      }
+    });
+  }
+}
+setInterval(tick, 250);
 
-  client = mqtt.connect(url, {
-    username: user,
-    password: pass,
+function setBroker(cls, txt) { $('bdot').className = 'dot ' + cls; $('btxt').textContent = txt; }
+
+// ------------------------------------------------------------ connection
+function connect(host, user, pass) {
+  client = mqtt.connect(`wss://${host}:8884/mqtt`, {   // 8884 = MQTT over WSS
+    username: user, password: pass,
     clientId: 'dbweb-' + Math.random().toString(16).slice(2, 10),
-    clean: true,
-    reconnectPeriod: 4000,
-    connectTimeout: 10000
+    clean: true, reconnectPeriod: 4000, connectTimeout: 10000
   });
 
   client.on('connect', () => {
-    if (remember) localStorage.setItem(KEY, JSON.stringify({ host, user, pass }));
+    localStorage.setItem(KEY, JSON.stringify({ host, user, pass }));
     $('login').classList.add('hide');
     $('dash').classList.remove('hide');
     $('sub').textContent = host;
     setBroker('on', 'Broker connected');
-    // Retained messages arrive immediately on subscribe, so state shows up
-    // without waiting for the device to publish anything new.
+    // Retained messages arrive on subscribe, so state appears immediately.
     client.subscribe('deskbuddy/+/state',  { qos: 1 });
     client.subscribe('deskbuddy/+/status', { qos: 1 });
-    render();
+    renderAll();
   });
 
   client.on('message', (topic, payload) => {
-    const parts = topic.split('/');       // deskbuddy / <id> / <leaf>
-    if (parts.length !== 3) return;
-    const id = parts[1];
+    const p = topic.split('/');
+    if (p.length !== 3) return;
+    const id = p[1];
     devices[id] = devices[id] || {};
-
-    if (parts[2] === 'status') {
+    if (p[2] === 'status') {
       devices[id].status = payload.toString();
-    } else if (parts[2] === 'state') {
+    } else if (p[2] === 'state') {
       try { devices[id].state = JSON.parse(payload.toString()); } catch (e) { return; }
+      devices[id].rxAt = Date.now();     // anchor for local interpolation
     }
-    render();
+    renderAll();
   });
 
   client.on('error', e => {
     const msg = (e && e.message) || 'Connection failed';
-    // Bad credentials surface here rather than as a close event.
     if (/not authorized|bad user|refused/i.test(msg)) {
-      signOut('Broker rejected those credentials. Check the username and ' +
+      signOut('The broker rejected those credentials. Check the username and ' +
               'password, and make sure you are using db-admin.');
-    } else {
-      setBroker('off', msg);
-    }
+    } else setBroker('off', msg);
   });
-
   client.on('reconnect', () => setBroker('wait', 'Reconnecting…'));
   client.on('close',     () => setBroker('off', 'Disconnected'));
 }
@@ -247,14 +375,13 @@ function signOut(message) {
   if (message) { $('err').textContent = message; $('err').classList.remove('hide'); }
 }
 
-// ---------------------------------------------------------------- boot
+// ------------------------------------------------------------ boot
 $('go').onclick = () => {
   const host = $('host').value.trim().replace(/^wss?:\/\//, '').replace(/[:/].*$/, '');
-  const user = $('user').value.trim();
-  const pass = $('pass').value;
+  const user = $('user').value.trim(), pass = $('pass').value;
   if (!host || !user || !pass) return;
   $('err').classList.add('hide');
-  connect(host, user, pass, true);
+  connect(host, user, pass);
 };
 $('pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
 $('out').onclick = () => signOut();
@@ -262,7 +389,7 @@ $('out').onclick = () => signOut();
 const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } })();
 $('host').value = (saved && saved.host) || DEFAULT_HOST;
 $('user').value = (saved && saved.user) || 'db-admin';
-if (saved && saved.pass) connect(saved.host, saved.user, saved.pass, true);
+if (saved && saved.pass) connect(saved.host, saved.user, saved.pass);
 </script>
 </body>
 </html>
